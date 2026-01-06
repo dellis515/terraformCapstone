@@ -95,7 +95,7 @@ resource "azurerm_windows_virtual_machine" "dc" {
     version   = "latest"
   }
 
-  enable_automatic_updates = true
+  automatic_updates_enabled = true
 }
 
 resource "azurerm_virtual_machine_extension" "dc_config" {
@@ -112,18 +112,6 @@ resource "azurerm_virtual_machine_extension" "dc_config" {
 
 #IIS SERVER
 
-resource "azurerm_network_interface" "iis" {
-  name                = "${var.prefix}-iis-nic"
-  location            = azurerm_resource_group.lab.location
-  resource_group_name = azurerm_resource_group.lab.name
-
-  ip_configuration {
-    name                          = "primary"
-    subnet_id                     = azurerm_subnet.lab.id
-    private_ip_address_allocation = "Dynamic"
-  }
-}
-
 resource "azurerm_windows_virtual_machine" "iis" {
   name                = "${var.prefix}-iis01"
   location            = azurerm_resource_group.lab.location
@@ -133,7 +121,14 @@ resource "azurerm_windows_virtual_machine" "iis" {
   admin_username = var.admin_username
   admin_password = var.admin_password
 
-  network_interface_ids = [azurerm_network_interface.iis.id]
+  network_interface_ids = [
+    azurerm_network_interface.iis.id
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
 
   source_image_reference {
     publisher = "MicrosoftWindowsServer"
@@ -142,8 +137,9 @@ resource "azurerm_windows_virtual_machine" "iis" {
     version   = "latest"
   }
 
-  enable_automatic_updates = true
+  automatic_updates_enabled = true
 }
+
 
 resource "azurerm_virtual_machine_extension" "iis_join" {
   name               = "iis-join-domain"
