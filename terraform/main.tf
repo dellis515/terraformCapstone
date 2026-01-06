@@ -112,6 +112,18 @@ resource "azurerm_virtual_machine_extension" "dc_config" {
 
 #IIS SERVER
 
+resource "azurerm_network_interface" "iis" {
+  name                = "${var.prefix}-iis-nic"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+
+  ip_configuration {
+    name                          = "primary"
+    subnet_id                     = azurerm_subnet.lab.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+
 resource "azurerm_windows_virtual_machine" "iis" {
   name                = "${var.prefix}-iis01"
   location            = azurerm_resource_group.lab.location
