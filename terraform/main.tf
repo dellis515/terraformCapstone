@@ -76,7 +76,7 @@ resource "azurerm_windows_virtual_machine" "dc" {
   name                = "${var.prefix}-dc01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_B2ms"
+  size                = "Standard_D2s_v5"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
@@ -128,7 +128,7 @@ resource "azurerm_windows_virtual_machine" "iis" {
   name                = "${var.prefix}-iis01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_B2ms"
+  size                = "Standard_D2s_v5"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
