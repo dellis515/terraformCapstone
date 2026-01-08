@@ -76,7 +76,7 @@ resource "azurerm_windows_virtual_machine" "dc" {
   name                = "${var.prefix}-dc01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_D2s_v5"
+  size                = "Standard_DS2_v2"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
@@ -120,7 +120,8 @@ resource "azurerm_network_interface" "iis" {
   ip_configuration {
     name                          = "primary"
     subnet_id                     = azurerm_subnet.lab.id
-    private_ip_address_allocation = "Dynamic"
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.0.0.10"
   }
 }
 
@@ -128,7 +129,7 @@ resource "azurerm_windows_virtual_machine" "iis" {
   name                = "${var.prefix}-iis01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_D2s_v5"
+  size                = "Standard_DS2_v2"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
