@@ -173,7 +173,6 @@ resource "azurerm_virtual_machine_extension" "iis_bootstrap" {
 
   settings = jsonencode({
     fileUris = [
-      "${local.base_raw}/scripts/wait-for-domain.ps1",
       "${local.base_raw}/scripts/member-join-domain.ps1",
       "${local.base_raw}/scripts/iis-config.ps1",
       "${local.base_raw}/scripts/patch-all.ps1"
@@ -181,6 +180,70 @@ resource "azurerm_virtual_machine_extension" "iis_bootstrap" {
     commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\member-join-domain.ps1; & .\\iis-config.ps1; & .\\patch-all.ps1\""
   })
 
+  depends_on = [
+    azurerm_virtual_machine_extension.dc_config
+  ]
+}
+
+# FILE SERVER
+
+resource "azurerm_network_interface" "fs" {
+  name                = "dellislab-fs-nic"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+
+  ip_configuration {
+    name                          = "primary"
+    subnet_id                     = azurerm_subnet.lab.id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.0.0.5" # pick an unused IP
+  }
+}
+
+resource "azurerm_windows_virtual_machine" "fs" {
+  name                = "dellislab-fs01"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+  size                = "Standard_D2s_v3"
+
+  admin_username = "labadmin"
+  admin_password = var.admin_password
+
+  network_interface_ids = [
+    azurerm_network_interface.fs.id
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2022-Datacenter"
+    version   = "latest"
+  }
+}
+
+resource "azurerm_virtual_machine_extension" "fs_bootstrap" {
+  name                 = "fs-bootstrap"
+  virtual_machine_id   = azurerm_windows_virtual_machine.fs.id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
+  type_handler_version = "1.10"
+
+  settings = jsonencode({
+    fileUris = [
+      "${local.base_raw}/scripts/member-join-domain.ps1",
+      "${local.base_raw}/scripts/fs-config.ps1",
+      "${local.base_raw}/scripts/patch-all.ps1",
+    ]
+
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\member-join-domain.ps1; & .\\fs-config.ps1; & .\\patch-all.ps1\""
+  })
+
+  # This is the “wait for DC to finish” part at Terraform level
   depends_on = [
     azurerm_virtual_machine_extension.dc_config
   ]
@@ -211,7 +274,7 @@ resource "azurerm_bastion_host" "lab" {
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
 
-  sku = "Basic" # cheapest
+  sku = "Basic"
 
   ip_configuration {
     name                 = "bastion-ipconfig"
