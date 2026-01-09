@@ -172,7 +172,7 @@ resource "azurerm_virtual_machine_extension" "iis_domain_join" {
 
   settings = jsonencode({
     Name    = var.domain_name          # "dellis.lab"
-    User    = "${var.domain_name}\\${var.admin_username}"
+    User    = "${var.domain_netbios}\\${var.admin_username}"
     Restart = "true"
     Options = "3"
   })
@@ -186,8 +186,8 @@ resource "azurerm_virtual_machine_extension" "iis_domain_join" {
   ]
 }
 
-resource "azurerm_virtual_machine_extension" "iis_bootstrap" {
-  name                 = "iis-bootstrap"
+resource "azurerm_virtual_machine_extension" "iis_config" {
+  name                 = "iis-config"
   virtual_machine_id   = azurerm_windows_virtual_machine.iis.id
   publisher            = "Microsoft.Compute"
   type                 = "CustomScriptExtension"
@@ -202,7 +202,8 @@ resource "azurerm_virtual_machine_extension" "iis_bootstrap" {
   })
 
   depends_on = [
-    azurerm_virtual_machine_extension.dc_config
+    azurerm_virtual_machine_extension.dc_config,
+    azurerm_virtual_machine_extension.iis_domain_join
   ]
 }
 
@@ -256,7 +257,7 @@ resource "azurerm_virtual_machine_extension" "fs_domain_join" {
 
   settings = jsonencode({
     Name    = var.domain_name          # "dellis.lab"
-    User    = "${var.domain_name}\\${var.admin_username}"
+    User    = "${var.domain_netbios}\\${var.admin_username}"
     Restart = "true"
     Options = "3"
   })
@@ -270,8 +271,8 @@ resource "azurerm_virtual_machine_extension" "fs_domain_join" {
   ]
 }
 
-resource "azurerm_virtual_machine_extension" "fs_bootstrap" {
-  name                 = "fs-bootstrap"
+resource "azurerm_virtual_machine_extension" "fs_config" {
+  name                 = "fs-config"
   virtual_machine_id   = azurerm_windows_virtual_machine.fs.id
   publisher            = "Microsoft.Compute"
   type                 = "CustomScriptExtension"
@@ -288,7 +289,8 @@ resource "azurerm_virtual_machine_extension" "fs_bootstrap" {
 
   # This is the “wait for DC to finish” part at Terraform level
   depends_on = [
-    azurerm_virtual_machine_extension.dc_config
+    azurerm_virtual_machine_extension.dc_config,
+    azurerm_virtual_machine_extension.fs_domain_join
   ]
 }
 
