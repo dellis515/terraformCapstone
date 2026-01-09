@@ -163,6 +163,28 @@ resource "azurerm_windows_virtual_machine" "iis" {
   automatic_updates_enabled = true
 }
 
+resource "azurerm_virtual_machine_extension" "fs_domain_join" {
+  name                 = "iis-join-domain"
+  virtual_machine_id   = azurerm_windows_virtual_machine.iis.id
+  publisher            = "Microsoft.Compute"
+  type                 = "JsonADDomainExtension"
+  type_handler_version = "1.3"
+
+  settings = jsonencode({
+    Name    = var.domain_name          # "dellis.lab"
+    User    = "${var.domain_name}\\${var.admin_username}"
+    Restart = "true"
+    Options = "3"
+  })
+
+  protected_settings = jsonencode({
+    Password = var.admin_password
+  })
+
+  depends_on = [
+    azurerm_virtual_machine_extension.dc_config
+  ]
+}
 
 resource "azurerm_virtual_machine_extension" "iis_bootstrap" {
   name                 = "iis-bootstrap"
@@ -173,11 +195,10 @@ resource "azurerm_virtual_machine_extension" "iis_bootstrap" {
 
   settings = jsonencode({
     fileUris = [
-      "${local.base_raw}/scripts/member-join-domain.ps1",
       "${local.base_raw}/scripts/iis-config.ps1",
       "${local.base_raw}/scripts/patch-all.ps1"
     ]
-    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\member-join-domain.ps1; & .\\iis-config.ps1; & .\\patch-all.ps1\""
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\iis-config.ps1; & .\\patch-all.ps1\""
   })
 
   depends_on = [
@@ -226,6 +247,29 @@ resource "azurerm_windows_virtual_machine" "fs" {
   }
 }
 
+resource "azurerm_virtual_machine_extension" "fs_domain_join" {
+  name                 = "fs-join-domain"
+  virtual_machine_id   = azurerm_windows_virtual_machine.fs.id
+  publisher            = "Microsoft.Compute"
+  type                 = "JsonADDomainExtension"
+  type_handler_version = "1.3"
+
+  settings = jsonencode({
+    Name    = var.domain_name          # "dellis.lab"
+    User    = "${var.domain_name}\\${var.admin_username}"
+    Restart = "true"
+    Options = "3"
+  })
+
+  protected_settings = jsonencode({
+    Password = var.admin_password
+  })
+
+  depends_on = [
+    azurerm_virtual_machine_extension.dc_config
+  ]
+}
+
 resource "azurerm_virtual_machine_extension" "fs_bootstrap" {
   name                 = "fs-bootstrap"
   virtual_machine_id   = azurerm_windows_virtual_machine.fs.id
@@ -235,12 +279,11 @@ resource "azurerm_virtual_machine_extension" "fs_bootstrap" {
 
   settings = jsonencode({
     fileUris = [
-      "${local.base_raw}/scripts/member-join-domain.ps1",
       "${local.base_raw}/scripts/fs-config.ps1",
       "${local.base_raw}/scripts/patch-all.ps1",
     ]
 
-    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\member-join-domain.ps1; & .\\fs-config.ps1; & .\\patch-all.ps1\""
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\fs-config.ps1; & .\\patch-all.ps1\""
   })
 
   # This is the “wait for DC to finish” part at Terraform level

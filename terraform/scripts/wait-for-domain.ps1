@@ -1,5 +1,5 @@
 $Domain = "dellis.lab"
-$DC     = "dellislab-dc01"   # or use the DC private IP / hostname
+$DC     = "10.0.0.4"   # or use the DC private IP / hostname
 $TimeoutMinutes = 30
 $SleepSeconds   = 15
 
