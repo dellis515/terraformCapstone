@@ -185,3 +185,46 @@ resource "azurerm_virtual_machine_extension" "iis_bootstrap" {
     azurerm_virtual_machine_extension.dc_config
   ]
 }
+
+# BASTION
+
+resource "azurerm_subnet" "bastion" {
+  name                 = "AzureBastionSubnet"
+  resource_group_name  = azurerm_resource_group.lab.name
+  virtual_network_name = azurerm_virtual_network.lab.name
+
+  # Must be /26 or smaller (e.g. /27) - /27 is common
+  address_prefixes = ["10.0.255.0/27"]
+}
+
+resource "azurerm_public_ip" "bastion" {
+  name                = "dellislab-bastion-pip"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+
+  allocation_method = "Static"
+  sku               = "Standard"
+}
+
+resource "azurerm_bastion_host" "lab" {
+  name                = "dellislab-bastion"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+
+  sku = "Basic" # cheapest
+
+  ip_configuration {
+    name                 = "bastion-ipconfig"
+    subnet_id            = azurerm_subnet.bastion.id
+    public_ip_address_id = azurerm_public_ip.bastion.id
+  }
+
+  depends_on = [
+    azurerm_subnet.bastion,
+    azurerm_public_ip.bastion
+  ]
+}
+
+output "bastion_name" {
+  value = azurerm_bastion_host.lab.name
+}
