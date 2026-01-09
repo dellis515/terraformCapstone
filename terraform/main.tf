@@ -100,7 +100,7 @@ resource "azurerm_windows_virtual_machine" "dc" {
 
 locals {
   ref = "circleci-project-setup"
-  base_raw = "https://raw.githubusercontent.com/dellis515/terraformCapstone/refs/heads/circleci-project-setup/terraform"
+  base_raw = "https://raw.githubusercontent.com/dellis515/terraformCapstone/circleci-project-setup/terraform"
 }
 
 resource "azurerm_virtual_machine_extension" "dc_config" {
