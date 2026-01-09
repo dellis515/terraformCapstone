@@ -173,10 +173,15 @@ resource "azurerm_virtual_machine_extension" "iis_bootstrap" {
 
   settings = jsonencode({
     fileUris = [
+      "${local.base_raw}/scripts/wait-for-domain.ps1",
       "${local.base_raw}/scripts/member-join-domain.ps1",
       "${local.base_raw}/scripts/iis-config.ps1",
       "${local.base_raw}/scripts/patch-all.ps1"
     ]
     commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\member-join-domain.ps1; & .\\iis-config.ps1; & .\\patch-all.ps1\""
   })
+
+  depends_on = [
+    azurerm_virtual_machine_extension.dc_config
+  ]
 }
