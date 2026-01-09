@@ -177,6 +177,6 @@ resource "azurerm_virtual_machine_extension" "iis_bootstrap" {
       "${local.base_raw}/scripts/iis-config.ps1",
       "${local.base_raw}/scripts/patch-all.ps1"
     ]
-    commandToExecute = "powershell -ExecutionPolicy Bypass -File member-join-domain.ps1; powershell -ExecutionPolicy Bypass -File iis-config.ps1; powershell -ExecutionPolicy Bypass -File patch-all.ps1"
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\member-join-domain.ps1; & .\\iis-config.ps1; & .\\patch-all.ps1\""
   })
 }
