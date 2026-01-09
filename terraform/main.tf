@@ -98,17 +98,27 @@ resource "azurerm_windows_virtual_machine" "dc" {
   automatic_updates_enabled = true
 }
 
+locals {
+  ref = "circleci-project-setup"
+  base_raw = "https://raw.githubusercontent.com/${var.github_owner}/${var.github_repo}/${local.ref}"
+}
+
 resource "azurerm_virtual_machine_extension" "dc_config" {
-  name               = "dc-config"
-  virtual_machine_id = azurerm_windows_virtual_machine.dc.id
-  publisher          = "Microsoft.Compute"
-  type               = "CustomScriptExtension"
+  name                 = "dc-config"
+  virtual_machine_id   = azurerm_windows_virtual_machine.dc.id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
   type_handler_version = "1.10"
 
   settings = jsonencode({
+    fileUris = [
+      "${local.base_raw}/scripts/dc-config.ps1"
+    ]
     commandToExecute = "powershell -ExecutionPolicy Bypass -File dc-config.ps1"
   })
 }
+
+
 
 #IIS SERVER
 
@@ -154,26 +164,19 @@ resource "azurerm_windows_virtual_machine" "iis" {
 }
 
 
-resource "azurerm_virtual_machine_extension" "iis_join" {
-  name               = "iis-join-domain"
-  virtual_machine_id = azurerm_windows_virtual_machine.iis.id
-  publisher          = "Microsoft.Compute"
-  type               = "CustomScriptExtension"
+resource "azurerm_virtual_machine_extension" "iis_bootstrap" {
+  name                 = "iis-bootstrap"
+  virtual_machine_id   = azurerm_windows_virtual_machine.iis.id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
   type_handler_version = "1.10"
 
   settings = jsonencode({
-    commandToExecute = "powershell -ExecutionPolicy Bypass -File member-join-domain.ps1"
-  })
-}
-
-resource "azurerm_virtual_machine_extension" "iis_config" {
-  name               = "iis-config"
-  virtual_machine_id = azurerm_windows_virtual_machine.iis.id
-  publisher          = "Microsoft.Compute"
-  type               = "CustomScriptExtension"
-  type_handler_version = "1.10"
-
-  settings = jsonencode({
-    commandToExecute = "powershell -ExecutionPolicy Bypass -File iis-config.ps1; powershell -File patch-all.ps1"
+    fileUris = [
+      "${local.base_raw}/scripts/member-join-domain.ps1",
+      "${local.base_raw}/scripts/iis-config.ps1",
+      "${local.base_raw}/scripts/patch-all.ps1"
+    ]
+    commandToExecute = "powershell -ExecutionPolicy Bypass -File member-join-domain.ps1; powershell -ExecutionPolicy Bypass -File iis-config.ps1; powershell -ExecutionPolicy Bypass -File patch-all.ps1"
   })
 }
