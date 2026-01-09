@@ -25,6 +25,10 @@ resource "azurerm_virtual_network" "lab" {
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
   address_space       = ["10.0.0.0/16"]
+
+  dns_servers = [
+    azurerm_network_interface.dc.private_ip_address
+  ]
 }
 
 resource "azurerm_subnet" "lab" {
@@ -118,7 +122,12 @@ resource "azurerm_virtual_machine_extension" "dc_config" {
   })
 }
 
+# DELAY
 
+resource "time_sleep" "wait_for_dc_ready" {
+  depends_on      = [azurerm_virtual_machine_extension.dc_config] # your DC promotion/config extension
+  create_duration = "300s"
+}
 
 #IIS SERVER
 
@@ -182,7 +191,7 @@ resource "azurerm_virtual_machine_extension" "iis_domain_join" {
   })
 
   depends_on = [
-    azurerm_virtual_machine_extension.dc_config
+    time_sleep.wait_for_dc_ready
   ]
 }
 
@@ -202,7 +211,6 @@ resource "azurerm_virtual_machine_extension" "iis_config" {
   })
 
   depends_on = [
-    azurerm_virtual_machine_extension.dc_config,
     azurerm_virtual_machine_extension.iis_domain_join
   ]
 }
@@ -267,7 +275,7 @@ resource "azurerm_virtual_machine_extension" "fs_domain_join" {
   })
 
   depends_on = [
-    azurerm_virtual_machine_extension.dc_config
+    time_sleep.wait_for_dc_ready
   ]
 }
 
@@ -289,7 +297,6 @@ resource "azurerm_virtual_machine_extension" "fs_config" {
 
   # This is the “wait for DC to finish” part at Terraform level
   depends_on = [
-    azurerm_virtual_machine_extension.dc_config,
     azurerm_virtual_machine_extension.fs_domain_join
   ]
 }
