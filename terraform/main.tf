@@ -163,7 +163,7 @@ resource "azurerm_windows_virtual_machine" "iis" {
   automatic_updates_enabled = true
 }
 
-resource "azurerm_virtual_machine_extension" "fs_domain_join" {
+resource "azurerm_virtual_machine_extension" "iis_domain_join" {
   name                 = "iis-join-domain"
   virtual_machine_id   = azurerm_windows_virtual_machine.iis.id
   publisher            = "Microsoft.Compute"
