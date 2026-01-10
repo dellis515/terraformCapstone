@@ -25,6 +25,8 @@ resource "azurerm_virtual_network" "lab" {
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
   address_space       = ["10.0.0.0/16"]
+
+  dns_servers = ["10.0.0.4"]
 }
 
 resource "azurerm_subnet" "lab" {
@@ -55,6 +57,11 @@ resource "azurerm_network_security_group" "lab" {
 resource "azurerm_subnet_network_security_group_association" "lab" {
   subnet_id                 = azurerm_subnet.lab.id
   network_security_group_id = azurerm_network_security_group.lab.id
+
+  depends_on = [
+    azurerm_subnet.lab,
+    azurerm_network_security_group.lab
+  ]
 }
 
 #DC
