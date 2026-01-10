@@ -239,7 +239,7 @@ resource "azurerm_windows_virtual_machine" "fs" {
   resource_group_name = azurerm_resource_group.lab.name
   size                = "Standard_D2s_v3"
 
-  admin_username = "labadmin"
+  admin_username = var.admin_username
   admin_password = var.admin_password
 
   network_interface_ids = [
@@ -301,6 +301,92 @@ resource "azurerm_virtual_machine_extension" "fs_config" {
   # This is the “wait for DC to finish” part at Terraform level
   depends_on = [
     azurerm_virtual_machine_extension.fs_domain_join
+  ]
+}
+
+# SQL SERVER
+
+resource "azurerm_network_interface" "sql" {
+  name                = "dellislab-sql-nic"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+
+  ip_configuration {
+    name                          = "primary"
+    subnet_id                     = azurerm_subnet.lab.id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.0.0.6" # pick an unused IP
+  }
+}
+
+resource "azurerm_windows_virtual_machine" "sql" {
+  name                = "dellislab-sql01"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+  size                = "Standard_D2s_v3"
+
+  admin_username = var.admin_username
+  admin_password = var.admin_password
+
+  network_interface_ids = [
+    azurerm_network_interface.sql.id
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2022-Datacenter"
+    version   = "latest"
+  }
+}
+
+resource "azurerm_virtual_machine_extension" "sql_domain_join" {
+  name                 = "sql-join-domain"
+  virtual_machine_id   = azurerm_windows_virtual_machine.fs.id
+  publisher            = "Microsoft.Compute"
+  type                 = "JsonADDomainExtension"
+  type_handler_version = "1.3"
+
+  settings = jsonencode({
+    Name    = var.domain_name          # "dellis.lab"
+    User    = "${var.domain_netbios}\\${var.admin_username}"
+    Restart = "true"
+    Options = "3"
+  })
+
+  protected_settings = jsonencode({
+    Password = var.admin_password
+  })
+
+  depends_on = [
+    time_sleep.wait_for_dc_ready
+  ]
+}
+
+resource "azurerm_virtual_machine_extension" "sql_config" {
+  name                 = "sql-config"
+  virtual_machine_id   = azurerm_windows_virtual_machine.fs.id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
+  type_handler_version = "1.10"
+
+  settings = jsonencode({
+    fileUris = [
+      "${local.base_raw}/scripts/sql-config.ps1",
+      "${local.base_raw}/scripts/patch-all.ps1",
+    ]
+
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\sql-config.ps1; & .\\patch-all.ps1\""
+  })
+
+  # This is the “wait for DC to finish” part at Terraform level
+  depends_on = [
+    azurerm_virtual_machine_extension.sql_domain_join
   ]
 }
 
