@@ -338,9 +338,9 @@ resource "azurerm_windows_virtual_machine" "sql" {
   }
 
   source_image_reference {
-    publisher = "MicrosoftWindowsServer"
-    offer     = "WindowsServer"
-    sku       = "2022-Datacenter"
+    publisher = "MicrosoftSQLServer"
+    offer     = "SQL2022-WS2022"
+    sku       = "SQLDEV"
     version   = "latest"
   }
 }
@@ -368,23 +368,10 @@ resource "azurerm_virtual_machine_extension" "sql_domain_join" {
   ]
 }
 
-resource "azurerm_virtual_machine_extension" "sql_config" {
-  name                 = "sql-config"
-  virtual_machine_id   = azurerm_windows_virtual_machine.fs.id
-  publisher            = "Microsoft.Compute"
-  type                 = "CustomScriptExtension"
-  type_handler_version = "1.10"
+resource "azurerm_mssql_virtual_machine" "sql01" {
+  virtual_machine_id = azurerm_windows_virtual_machine.sql.id
+  sql_license_type   = "PAYG"
 
-  settings = jsonencode({
-    fileUris = [
-      "${local.base_raw}/scripts/sql-config.ps1",
-      "${local.base_raw}/scripts/patch-all.ps1",
-    ]
-
-    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\sql-config.ps1; & .\\patch-all.ps1\""
-  })
-
-  # This is the “wait for DC to finish” part at Terraform level
   depends_on = [
     azurerm_virtual_machine_extension.sql_domain_join
   ]
