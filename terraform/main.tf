@@ -340,14 +340,14 @@ resource "azurerm_windows_virtual_machine" "sql" {
   source_image_reference {
     publisher = "MicrosoftSQLServer"
     offer     = "SQL2022-WS2022"
-    sku       = "SQLDEV"
+    sku       = "sqldev-gen2"
     version   = "latest"
   }
 }
 
 resource "azurerm_virtual_machine_extension" "sql_domain_join" {
   name                 = "sql-join-domain"
-  virtual_machine_id   = azurerm_windows_virtual_machine.fs.id
+  virtual_machine_id   = azurerm_windows_virtual_machine.sql.id
   publisher            = "Microsoft.Compute"
   type                 = "JsonADDomainExtension"
   type_handler_version = "1.3"
