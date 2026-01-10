@@ -121,7 +121,7 @@ resource "azurerm_virtual_machine_extension" "dc_config" {
     fileUris = [
       "${local.base_raw}/scripts/dc-config.ps1"
     ]
-    commandToExecute = "powershell -ExecutionPolicy Bypass -File dc-config.ps1"
+    commandToExecute = "powershell -ExecutionPolicy Bypass -File .\\dc-config.ps1"
   })
 }
 
@@ -339,7 +339,8 @@ resource "azurerm_bastion_host" "lab" {
 
   depends_on = [
     azurerm_subnet.bastion,
-    azurerm_public_ip.bastion
+    azurerm_public_ip.bastion,
+    azurerm_virtual_machine_extension.fs_config
   ]
 }
 
