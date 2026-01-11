@@ -214,44 +214,29 @@ resource "azurerm_virtual_machine_run_command" "ca_prereq" {
   ]
 }
 
-resource "azurerm_virtual_machine_run_command" "ca_config" {
-  name               = "ca-config"
-  location           = azurerm_resource_group.lab.location
-  virtual_machine_id = azurerm_windows_virtual_machine.ca.id
+resource "azurerm_virtual_machine_extension" "ca_config" {
+  name                 = "ca-config"
+  virtual_machine_id   = azurerm_windows_virtual_machine.ca.id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
+  type_handler_version = "1.10"
 
-  source {
-    script = file("${path.module}/scripts/ca-config-system-embedded.ps1")
-  }
+  settings = jsonencode({
+    fileUris = [
+      "${local.base_raw}/scripts/ca-config-runcommand.ps1",
+      "${local.base_raw}/scripts/ca-bootstrap-schtask.ps1"
+    ]
+  })
 
-  parameter {
-    name  = "DcIp"
-    value = "10.0.0.4"
-  }
-
-  parameter {
-    name  = "DomainUser"
-    value = "labadmin@${var.domain_name}"
-  }
-
-  parameter {
-    name  = "CaCommonName"
-    value = "${var.prefix}-CA01"
-  }
-
-  protected_parameter {
-    name  = "DomainPassword"
-    value = var.admin_password
-  }
+  protected_settings = jsonencode({
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\ca-bootstrap-schtask.ps1 -DomainNetbios \"${var.domain_netbios}\" -DomainUser \"labadmin\" -DomainPassword \"${var.admin_password}\" -DomainFqdn \"${var.domain_name}\" -DcIp \"10.0.0.4\" -ScriptPath \".\\ca-config-runcommand.ps1\""
+  })
 
   depends_on = [
-    azurerm_virtual_machine_run_command.ca_prereq
+    azurerm_virtual_machine_extension.ca_domain_join
   ]
-
-  timeouts {
-    create = "120m"
-    update = "120m"
-  }
 }
+
 
 
 #IIS SERVER
@@ -340,7 +325,7 @@ resource "azurerm_virtual_machine_extension" "iis_config" {
 
   depends_on = [
     azurerm_virtual_machine_extension.iis_domain_join,
-    azurerm_virtual_machine_run_command.ca_config
+    azurerm_virtual_machine_extension.ca_config
   ]
 }
 
