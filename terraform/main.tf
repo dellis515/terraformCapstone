@@ -196,26 +196,38 @@ resource "azurerm_virtual_machine_extension" "ca_domain_join" {
   ]
 }
 
-resource "azurerm_virtual_machine_extension" "ca_config" {
-  name                 = "ca-config"
-  virtual_machine_id   = azurerm_windows_virtual_machine.ca.id
-  publisher            = "Microsoft.Compute"
-  type                 = "CustomScriptExtension"
-  type_handler_version = "1.10"
+resource "azurerm_virtual_machine_run_command" "ca_prereq" {
+  name               = "ca-prereq"
+  location           = azurerm_resource_group.lab.location
+  virtual_machine_id = azurerm_windows_virtual_machine.ca.id
 
-  settings = jsonencode({
-    fileUris = [
-      "${local.base_raw}/scripts/ca-config.ps1"
-    ]
-  })
-
-  # Put the command in protected_settings so the password isn't in public settings.
-  protected_settings = jsonencode({
-    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\ca-config.ps1 -DomainFqdn \"${var.domain_name}\" -DcIp \"10.0.0.4\" -DomainUser \"${var.domain_netbios}\\${var.admin_username}\" -DomainPassword \"${var.admin_password}\" -CaCommonName \"${var.prefix}-CA01\""
-  })
+  source {
+    script = <<-PS1
+      Set-Service seclogon -StartupType Manual
+      Start-Service seclogon
+      Get-Service seclogon | Select Name, Status, StartType
+    PS1
+  }
 
   depends_on = [
     azurerm_virtual_machine_extension.ca_domain_join
+  ]
+}
+
+resource "azurerm_virtual_machine_run_command" "ca_config" {
+  name               = "ca-config"
+  location           = azurerm_resource_group.lab.location
+  virtual_machine_id = azurerm_windows_virtual_machine.ca.id
+
+  run_as_user     = "${var.domain_netbios}\\${var.admin_username}"
+  run_as_password = var.admin_password
+
+  source {
+    script = file("${path.module}/scripts/ca-config-runcommand.ps1")
+  }
+
+  depends_on = [
+    azurerm_virtual_machine_run_command.ca_prereq
   ]
 
   timeouts {
@@ -223,6 +235,7 @@ resource "azurerm_virtual_machine_extension" "ca_config" {
     update = "120m"
   }
 }
+
 
 
 #IIS SERVER
