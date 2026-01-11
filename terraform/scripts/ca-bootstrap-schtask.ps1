@@ -59,7 +59,7 @@ $ru = "$DomainNetbios\$DomainUser"
 
 # optional: ensure local admin (harmless in lab)
 Write-Host "==> Ensuring $ru is in local Administrators"
-cmd /c "net localgroup administrators `"$ru`" /add" 1>$null 2>$null
+cmd /c "net localgroup administrators `"$ru`" /add" | Out-Null
 
 # Resolve the CA script path (relative to CSE download folder) and copy to a stable location
 $resolved = $null
