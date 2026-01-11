@@ -23,32 +23,6 @@ try {
   Set-DnsClientServerAddress -InterfaceAlias $if -ServerAddresses $DcIp
 }
 
-
-
-Write-Host "==> Waiting for domain join + AD readiness"
-$deadline = (Get-Date).AddMinutes(45)
-while ((Get-Date) -lt $deadline) {
-  try {
-    Resolve-DnsName $DomainFqdn -ErrorAction Stop | Out-Null
-
-    $cs = Get-CimInstance Win32_ComputerSystem
-    if (-not $cs.PartOfDomain) { throw "Not domain-joined yet" }
-
-    if (Test-Path "\\$DcIp\SYSVOL") { break }
-
-    Write-Host "Domain joined; waiting for SYSVOL..."
-  } catch {
-    Write-Host "Not ready: $($_.Exception.Message)"
-  }
-  Start-Sleep -Seconds 15
-}
-
-if ((Get-Date) -ge $deadline) {
-  Write-Error "Timed out waiting for domain readiness."
-  Stop-Transcript
-  exit 1
-}
-
 Write-Host "==> Waiting for CA to publish into AD ($CaCommonName)"
 $deadline = (Get-Date).AddMinutes(60)
 while ((Get-Date) -lt $deadline) {
