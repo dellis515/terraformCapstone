@@ -63,6 +63,17 @@ cmd /c "net localgroup administrators `"$ru`" /add" | Out-Null
 
 if (-not (Test-Path $ScriptPath)) { throw "CA config script not found at $ScriptPath" }
 
+$destDir = "C:\Windows\Temp\ca"
+New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+
+$scriptFull = Resolve-Path $ScriptPath
+$scriptDest = Join-Path $destDir "ca-config-runcommand.ps1"
+Copy-Item $scriptFull $scriptDest -Force
+
+$ScriptPath = $scriptDest
+Write-Host "==> Using CA script at $ScriptPath"
+
+
 $taskName = "CA-Config"
 $outLog   = "C:\Windows\Temp\ca-task.out"
 $errLog   = "C:\Windows\Temp\ca-task.err"
