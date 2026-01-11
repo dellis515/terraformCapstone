@@ -42,7 +42,7 @@ if (Test-Path `$caReg) {
   Import-Module ADCSDeployment
   Install-AdcsCertificationAuthority `
     -CAType EnterpriseRootCA `
-    -CACommonName `$CaCommonName `
+    -CACommonName $CaCommonName `
     -KeyLength 2048 `
     -HashAlgorithmName SHA256 `
     -ValidityPeriod Years `
