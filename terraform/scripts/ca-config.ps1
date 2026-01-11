@@ -35,14 +35,14 @@ Install-WindowsFeature ADCS-Cert-Authority -IncludeManagementTools
 
 Write-Host '==> Configuring Enterprise Root CA'
 
-$caReg = 'HKLM:\SYSTEM\CurrentControlSet\Services\CertSvc\Configuration'
-if (Test-Path $caReg) {
+`$caReg = 'HKLM:\SYSTEM\CurrentControlSet\Services\CertSvc\Configuration'
+if (Test-Path `$caReg) {
   Write-Host 'CA already configured; skipping Install-AdcsCertificationAuthority.'
 } else {
   Import-Module ADCSDeployment
   Install-AdcsCertificationAuthority `
     -CAType EnterpriseRootCA `
-    -CACommonName $CaCommonName `
+    -CACommonName `$CaCommonName `
     -KeyLength 2048 `
     -HashAlgorithmName SHA256 `
     -ValidityPeriod Years `

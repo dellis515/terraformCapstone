@@ -85,7 +85,7 @@ if (-not (Get-WebBinding -Name 'Default Web Site' -Protocol 'https' -ErrorAction
 # Request cert (machine store) using the Enterprise Web Server template
 Import-Module PKI -ErrorAction SilentlyContinue
 
-`$fqdn = "`$env:COMPUTERNAME.$DomainFqdn"
+`$fqdn = "dellis.lab"
 Write-Host "Requesting WebServer cert for SAN: `$fqdn"
 
 `$req = Get-Certificate `
