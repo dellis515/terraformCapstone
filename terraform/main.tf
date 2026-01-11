@@ -223,15 +223,25 @@ resource "azurerm_virtual_machine_run_command" "ca_config" {
     script = file("${path.module}/scripts/ca-config-system-embedded.ps1")
   }
 
-  parameters = [
-    { name = "DcIp",         value = "10.0.0.4" },
-    { name = "DomainUser",   value = "labadmin@${var.domain_name}" },
-    { name = "CaCommonName", value = "${var.prefix}-CA" }
-  ]
+  parameter {
+    name  = "DcIp"
+    value = "10.0.0.4"
+  }
 
-  protected_parameters = [
-    { name = "DomainPassword", value = var.admin_password }
-  ]
+  parameter {
+    name  = "DomainUser"
+    value = "labadmin@${var.domain_name}"
+  }
+
+  parameter {
+    name  = "CaCommonName"
+    value = "${var.prefix}-CA01"
+  }
+
+  protected_parameter {
+    name  = "DomainPassword"
+    value = var.admin_password
+  }
 
   depends_on = [
     azurerm_virtual_machine_run_command.ca_prereq
