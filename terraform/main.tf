@@ -134,8 +134,6 @@ resource "time_sleep" "wait_for_dc_ready" {
 
 # CA SERVER
 
-# CA SERVER (AD-integrated Enterprise Root CA)
-
 resource "azurerm_network_interface" "ca" {
   name                = "${var.prefix}-ca-nic"
   location            = azurerm_resource_group.lab.location
@@ -153,7 +151,7 @@ resource "azurerm_windows_virtual_machine" "ca" {
   name                = "${var.prefix}-ca01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_B1ms"
+  size                = "Standard_B1s"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
@@ -246,7 +244,7 @@ resource "azurerm_windows_virtual_machine" "iis" {
   name                = "${var.prefix}-iis01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_B1ms"
+  size                = "Standard_B1s"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
@@ -336,7 +334,7 @@ resource "azurerm_windows_virtual_machine" "fs" {
   name                = "dellislab-fs01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_B1ms"
+  size                = "Standard_B1s"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
