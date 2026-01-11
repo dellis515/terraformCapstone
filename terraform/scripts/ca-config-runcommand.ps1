@@ -1,6 +1,6 @@
 param(
   [string]$DcIp = "10.0.0.4",
-  [string]$CaCommonName = "DELLISLAB-CA01"
+  [string]$CaCommonName = "DELLISLAB-CA"
 )
 
 $ErrorActionPreference = "Stop"
@@ -64,7 +64,7 @@ Write-Host "==> Enable computer auto-enrollment GPO (no ActiveDirectory module r
 Install-WindowsFeature GPMC -IncludeManagementTools | Out-Null
 Import-Module GroupPolicy
 
-$dn = ([ADSI]"LDAP://RootDSE").defaultNamingContext
+$dn = [string]([ADSI]"LDAP://RootDSE").defaultNamingContext
 $gpoName = "Enable Certificate Autoenrollment"
 
 $gpo = Get-GPO -Name $gpoName -ErrorAction SilentlyContinue

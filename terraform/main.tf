@@ -219,15 +219,19 @@ resource "azurerm_virtual_machine_run_command" "ca_config" {
   location           = azurerm_resource_group.lab.location
   virtual_machine_id = azurerm_windows_virtual_machine.ca.id
 
-  run_as_user     = "${var.admin_username}@${var.domain_name}"
-  run_as_password = var.admin_password
-
   source {
-    #script = file("${path.module}/scripts/ca-config-runcommand.ps1")
-    script = <<-PS1
-      Write-Host hello
-    PS1
+    script = file("${path.module}/scripts/ca-config-system-embedded.ps1")
   }
+
+  parameters = [
+    { name = "DcIp",         value = "10.0.0.4" },
+    { name = "DomainUser",   value = "labadmin@${var.domain_name}" },
+    { name = "CaCommonName", value = "${var.prefix}-CA" }
+  ]
+
+  protected_parameters = [
+    { name = "DomainPassword", value = var.admin_password }
+  ]
 
   depends_on = [
     azurerm_virtual_machine_run_command.ca_prereq
@@ -238,6 +242,7 @@ resource "azurerm_virtual_machine_run_command" "ca_config" {
     update = "120m"
   }
 }
+
 
 #IIS SERVER
 
