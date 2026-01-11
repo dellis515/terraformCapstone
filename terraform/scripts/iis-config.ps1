@@ -23,6 +23,8 @@ try {
   Set-DnsClientServerAddress -InterfaceAlias $if -ServerAddresses $DcIp
 }
 
+
+
 Write-Host "==> Waiting for domain join + AD readiness"
 $deadline = (Get-Date).AddMinutes(45)
 while ((Get-Date) -lt $deadline) {
@@ -71,8 +73,13 @@ if ((Get-Date) -ge $deadline) {
 
 # Inner script that runs as Domain Admin to guarantee enrollment works with default template permissions
 $innerPath = "C:\Windows\Temp\request-webcert.ps1"
-@"
-`$ErrorActionPreference = 'Stop'
+
+@'
+param(
+  [Parameter(Mandatory=$true)][string]$Fqdn
+)
+
+$ErrorActionPreference = 'Stop'
 Start-Transcript -Path 'C:\Windows\Temp\iis-cert-enroll.log' -Append
 
 Import-Module WebAdministration
@@ -82,24 +89,23 @@ if (-not (Get-WebBinding -Name 'Default Web Site' -Protocol 'https' -ErrorAction
   New-WebBinding -Name 'Default Web Site' -Protocol https -Port 443 -IPAddress '*'
 }
 
+Write-Host "Requesting WebServer cert for SAN: $Fqdn"
+
 # Request cert (machine store) using the Enterprise Web Server template
 Import-Module PKI -ErrorAction SilentlyContinue
 
-`$fqdn = "dellis.lab"
-Write-Host "Requesting WebServer cert for SAN: `$fqdn"
-
-`$req = Get-Certificate `
+$req = Get-Certificate `
   -Template 'WebServer' `
-  -DnsName `$fqdn `
+  -DnsName $Fqdn `
   -CertStoreLocation 'Cert:\LocalMachine\My'
 
-`$thumb = `$req.Certificate.Thumbprint
-Write-Host "Issued cert thumbprint: `$thumb"
+$thumb = $req.Certificate.Thumbprint
+Write-Host "Issued cert thumbprint: $thumb"
 
 # Bind cert to 0.0.0.0:443
-`$sslPath = 'IIS:\SslBindings\0.0.0.0!443'
-if (Test-Path `$sslPath) { Remove-Item `$sslPath -Force }
-New-Item `$sslPath -Thumbprint `$thumb -SSLFlags 0 | Out-Null
+$sslPath = 'IIS:\SslBindings\0.0.0.0!443'
+if (Test-Path $sslPath) { Remove-Item $sslPath -Force }
+New-Item $sslPath -Thumbprint $thumb -SSLFlags 0 | Out-Null
 
 # Allow inbound 443
 if (-not (Get-NetFirewallRule -DisplayName 'Allow HTTPS (Lab)' -ErrorAction SilentlyContinue)) {
@@ -108,54 +114,76 @@ if (-not (Get-NetFirewallRule -DisplayName 'Allow HTTPS (Lab)' -ErrorAction Sile
 
 iisreset | Out-Null
 Write-Host "HTTPS configured successfully."
-
 Stop-Transcript
-"@ | Set-Content -Path $innerPath -Encoding UTF8 -Force
+'@ | Set-Content -Path $innerPath -Encoding UTF8 -Force
 
 Write-Host "==> Creating scheduled task to enroll cert as $DomainUser"
 $taskName = "Enroll-IIS-WebCert"
 
-schtasks.exe /Delete /TN $taskName /F | Out-Null 2>&1
+$sch = Join-Path $env:WINDIR "System32\schtasks.exe"
 
-# Start 1 minute from now
-$st = (Get-Date).AddMinutes(1).ToString("HH:mm")
-$tr = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File `"$innerPath`""
+# delete if exists (ignore failures)
+& $sch /Query /TN "$taskName" > $null 2> $null
+if ($LASTEXITCODE -eq 0) {
+  & $sch /Delete /TN "$taskName" /F > $null 2> $null
+}
 
-schtasks.exe /Create `
-  /TN $taskName `
-  /SC ONCE `
-  /ST $st `
-  /RL HIGHEST `
-  /RU $DomainUser `
-  /RP $DomainPassword `
-  /TR $tr `
-  /F | Out-Null
+# Ensure inner script exists
+if (-not (Test-Path $innerPath)) { throw "Inner script missing at $innerPath" }
 
-schtasks.exe /Run /TN $taskName | Out-Null
+$outLog = "C:\Windows\Temp\iis-enroll-task.out"
+$errLog = "C:\Windows\Temp\iis-enroll-task.err"
+
+# Start 2 minutes from now (schtasks requires a time even if we /Run immediately)
+$st = (Get-Date).AddMinutes(2).ToString("HH:mm")
+
+$webFqdn = "$($env:COMPUTERNAME).$DomainFqdn"
+Write-Host "==> Will request certificate for: $webFqdn"
+
+# /TR: set working dir + run script + pass fqdn param + capture stdout/stderr
+$tr = "cmd.exe /c cd /d C:\Windows\Temp ^&^& powershell.exe -ExecutionPolicy Bypass -NoProfile -File `"$innerPath`" -Fqdn `"$webFqdn`" 1>>`"$outLog`" 2>>`"$errLog`""
+
+Write-Host "==> schtasks /Create ... (password redacted)"
+& $sch /Create /TN "$taskName" /SC ONCE /ST $st /RL HIGHEST /RU "$DomainUser" /RP "$DomainPassword" /TR "$tr" /F | Out-Null
+
+& $sch /Run /TN "$taskName" | Out-Null
 
 Write-Host "==> Waiting for enrollment task completion"
 $deadline = (Get-Date).AddMinutes(45)
+
 while ((Get-Date) -lt $deadline) {
-  $q = schtasks.exe /Query /TN $taskName /V /FO LIST 2>$null
-  if ($LASTEXITCODE -eq 0) {
-    $line = ($q | Select-String -Pattern "^Last Run Result:\s+").Line
-    if ($line) {
-      $result = $line -replace "^Last Run Result:\s+", ""
-      if ($result -eq "0x0") {
-        Write-Host "Enrollment task succeeded."
-        Stop-Transcript
-        exit 0
-      }
-      if ($result -ne "0x41301") { # 0x41301 = running
-        Write-Error "Enrollment task failed: $result. Check C:\Windows\Temp\iis-cert-enroll.log"
-        Stop-Transcript
-        exit 1
-      }
-    }
+  $q = & $sch /Query /TN "$taskName" /FO LIST /V 2>&1
+
+  $statusLine = ($q | Select-String -Pattern '^Status:\s+').ToString()
+  $resultLine = ($q | Select-String -Pattern '^(Last Result|Last Run Result):\s+').ToString()
+
+  if ($statusLine -match 'Status:\s+Running') {
+    Start-Sleep 10
+    continue
   }
-  Start-Sleep -Seconds 15
+
+  Write-Host $statusLine
+  Write-Host $resultLine
+
+  $raw = ($resultLine -replace '^(Last Result|Last Run Result):\s+','').Trim()
+
+  # normalize: accept 0, 0x0, or decimal 0
+  if ($raw -eq '0' -or $raw -eq '0x0') {
+    Write-Host "Enrollment task succeeded."
+    Stop-Transcript
+    exit 0
+  }
+
+  # If it returns decimal (like -196608), print hex for easier debugging
+  try {
+    $n = [int]$raw
+    $hex = ('0x{0:X8}' -f ($n -band 0xFFFFFFFF))
+    Write-Host "Last Result (hex): $hex"
+  } catch {}
+
+  if (Test-Path $outLog) { Get-Content $outLog -Tail 200 }
+  if (Test-Path $errLog) { Get-Content $errLog -Tail 200 }
+  throw "Enrollment task failed: $raw. Check C:\Windows\Temp\iis-cert-enroll.log"
 }
 
-Write-Error "Timed out waiting for enrollment task. Check C:\Windows\Temp\iis-cert-enroll.log"
-Stop-Transcript
-exit 1
+throw "Timed out waiting for enrollment task. Check C:\Windows\Temp\iis-cert-enroll.log"
