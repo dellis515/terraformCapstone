@@ -34,16 +34,22 @@ Write-Host '==> Installing ADCS role'
 Install-WindowsFeature ADCS-Cert-Authority -IncludeManagementTools
 
 Write-Host '==> Configuring Enterprise Root CA'
-Import-Module ADCSDeployment
 
-Install-AdcsCertificationAuthority `
-  -CAType EnterpriseRootCA `
-  -CACommonName '$CaCommonName' `
-  -KeyLength 2048 `
-  -HashAlgorithmName SHA256 `
-  -ValidityPeriod Years `
-  -ValidityPeriodUnits 10 `
-  -Force
+$caReg = 'HKLM:\SYSTEM\CurrentControlSet\Services\CertSvc\Configuration'
+if (Test-Path $caReg) {
+  Write-Host 'CA already configured; skipping Install-AdcsCertificationAuthority.'
+} else {
+  Import-Module ADCSDeployment
+  Install-AdcsCertificationAuthority `
+    -CAType EnterpriseRootCA `
+    -CACommonName $CaCommonName `
+    -KeyLength 2048 `
+    -HashAlgorithmName SHA256 `
+    -ValidityPeriod Years `
+    -ValidityPeriodUnits 10 `
+    -Force
+}
+
 
 Write-Host '==> Optional: Web Enrollment'
 Install-WindowsFeature ADCS-Web-Enrollment -IncludeManagementTools
@@ -56,10 +62,9 @@ certutil -f -SetCATemplates +WebServer | Out-Null
 Write-Host '==> Enabling Computer certificate autoenrollment via GPO'
 Install-WindowsFeature GPMC -IncludeManagementTools | Out-Null
 Import-Module GroupPolicy
-Import-Module ActiveDirectory
 
 `$gpoName = 'Enable Certificate Autoenrollment'
-`$dn = (Get-ADDomain).DistinguishedName
+`$dn = ([ADSI]"LDAP://RootDSE").defaultNamingContext
 
 `$gpo = Get-GPO -Name `$gpoName -ErrorAction SilentlyContinue
 if (-not `$gpo) { `$gpo = New-GPO -Name `$gpoName }

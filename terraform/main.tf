@@ -598,7 +598,7 @@ resource "azurerm_bastion_host" "lab" {
   depends_on = [
     azurerm_subnet.bastion,
     azurerm_public_ip.bastion,
-    azurerm_virtual_machine_extension.iis_config
+    time_sleep.wait_for_dc_ready
   ]
 }
 
