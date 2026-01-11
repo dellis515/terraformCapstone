@@ -219,7 +219,7 @@ resource "azurerm_virtual_machine_run_command" "ca_config" {
   location           = azurerm_resource_group.lab.location
   virtual_machine_id = azurerm_windows_virtual_machine.ca.id
 
-  run_as_user     = "${var.domain_netbios}\\${var.admin_username}"
+  run_as_user     = "${var.admin_username}@${var.domain_name}"
   run_as_password = var.admin_password
 
   source {
