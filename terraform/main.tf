@@ -236,8 +236,6 @@ resource "azurerm_virtual_machine_run_command" "ca_config" {
   }
 }
 
-
-
 #IIS SERVER
 
 resource "azurerm_network_interface" "iis" {
@@ -324,7 +322,7 @@ resource "azurerm_virtual_machine_extension" "iis_config" {
 
   depends_on = [
     azurerm_virtual_machine_extension.iis_domain_join,
-    azurerm_virtual_machine_extension.ca_config
+    azurerm_virtual_machine_run_command.ca_config
   ]
 }
 
