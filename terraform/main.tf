@@ -233,7 +233,7 @@ resource "azurerm_virtual_machine_extension" "ca_config" {
   })
 
   depends_on = [
-    azurerm_virtual_machine_extension.ca_domain_join
+    azurerm_virtual_machine_run_command.ca_prereq
   ]
 }
 

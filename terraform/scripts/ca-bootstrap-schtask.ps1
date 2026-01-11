@@ -69,9 +69,6 @@ $errLog   = "C:\Windows\Temp\ca-task.err"
 
 Write-Host "==> Creating scheduled task $taskName as $ru (schtasks.exe)"
 
-# delete if exists
-cmd /c "schtasks /Delete /TN `"$taskName`" /F" 1>$null 2>$null
-
 # schtasks needs a start time even if we run immediately
 $st = (Get-Date).AddMinutes(2).ToString("HH:mm")
 
