@@ -223,7 +223,10 @@ resource "azurerm_virtual_machine_run_command" "ca_config" {
   run_as_password = var.admin_password
 
   source {
-    script = file("${path.module}/scripts/ca-config-runcommand.ps1")
+    #script = file("${path.module}/scripts/ca-config-runcommand.ps1")
+    script = <<-PS1
+      Write-Host hello
+    PS1
   }
 
   depends_on = [
