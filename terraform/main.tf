@@ -305,11 +305,6 @@ resource "azurerm_virtual_machine_extension" "iis_domain_join" {
   ]
 }
 
-variable "iis_config_revision" {
-  type    = string
-  default = "1"
-}
-
 resource "azurerm_virtual_machine_extension" "iis_config" {
   name                 = "iis-config"
   virtual_machine_id   = azurerm_windows_virtual_machine.iis.id
@@ -322,7 +317,6 @@ resource "azurerm_virtual_machine_extension" "iis_config" {
       "${local.base_raw}/scripts/iis-config.ps1",
       "${local.base_raw}/scripts/patch-all.ps1"
     ]
-    timestamp = var.iis_config_revision
   })
 
 
