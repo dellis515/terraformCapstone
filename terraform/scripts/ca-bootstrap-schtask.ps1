@@ -59,19 +59,25 @@ $ru = "$DomainNetbios\$DomainUser"
 
 # optional: ensure local admin (harmless in lab)
 Write-Host "==> Ensuring $ru is in local Administrators"
-cmd /c "net localgroup administrators `"$ru`" /add" | Out-Null
+cmd /c "net localgroup administrators `"$ru`" /add" 1>$null 2>$null
 
-if (-not (Test-Path $ScriptPath)) { throw "CA config script not found at $ScriptPath" }
+# Resolve the CA script path (relative to CSE download folder) and copy to a stable location
+$resolved = $null
+try { $resolved = (Resolve-Path $ScriptPath).Path } catch {}
+
+if (-not $resolved -or -not (Test-Path $resolved)) {
+  throw "CA config script not found at $ScriptPath (resolved: $resolved)"
+}
 
 $destDir = "C:\Windows\Temp\ca"
 New-Item -ItemType Directory -Path $destDir -Force | Out-Null
 
-$scriptFull = Resolve-Path $ScriptPath
 $scriptDest = Join-Path $destDir "ca-config-runcommand.ps1"
-Copy-Item $scriptFull $scriptDest -Force
+Copy-Item $resolved $scriptDest -Force
 
 $ScriptPath = $scriptDest
 Write-Host "==> Using CA script at $ScriptPath"
+
 
 
 $taskName = "CA-Config"

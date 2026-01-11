@@ -229,7 +229,7 @@ resource "azurerm_virtual_machine_extension" "ca_config" {
   })
 
   protected_settings = jsonencode({
-    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\ca-bootstrap-schtask.ps1 -DomainNetbios \"${var.domain_netbios}\" -DomainUser \"labadmin\" -DomainPassword \"${var.admin_password}\" -DomainFqdn \"${var.domain_name}\" -DcIp \"10.0.0.4\" -ScriptPath \"C:\\Windows\\Temp\\ca-config-runcommand.ps1\""
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\ca-bootstrap-schtask.ps1 -DomainNetbios \"${var.domain_netbios}\" -DomainUser \"labadmin\" -DomainPassword \"${var.admin_password}\" -DomainFqdn \"${var.domain_name}\" -DcIp \"10.0.0.4\" -ScriptPath \".\\ca-config-runcommand.ps1\""
   })
 
   depends_on = [
