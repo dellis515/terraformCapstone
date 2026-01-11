@@ -23,28 +23,6 @@ try {
   Set-DnsClientServerAddress -InterfaceAlias $if -ServerAddresses $DcIp
 }
 
-Write-Host "==> Waiting for CA to publish into AD ($CaCommonName)"
-$deadline = (Get-Date).AddMinutes(60)
-while ((Get-Date) -lt $deadline) {
-  try {
-    $adca = & certutil.exe -adca 2>$null
-    if ($adca -and ($adca -match [regex]::Escape($CaCommonName))) {
-      Write-Host "CA appears in AD."
-      break
-    }
-    Write-Host "CA not visible yet..."
-  } catch {
-    Write-Host "certutil -adca failed: $($_.Exception.Message)"
-  }
-  Start-Sleep -Seconds 15
-}
-
-if ((Get-Date) -ge $deadline) {
-  Write-Error "Timed out waiting for CA to appear in AD."
-  Stop-Transcript
-  exit 1
-}
-
 # Inner script that runs as Domain Admin to guarantee enrollment works with default template permissions
 $innerPath = "C:\Windows\Temp\request-webcert.ps1"
 
