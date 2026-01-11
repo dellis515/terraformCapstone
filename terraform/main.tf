@@ -132,6 +132,96 @@ resource "time_sleep" "wait_for_dc_ready" {
   create_duration = "300s"
 }
 
+# CA SERVER
+
+# CA SERVER (AD-integrated Enterprise Root CA)
+
+resource "azurerm_network_interface" "ca" {
+  name                = "${var.prefix}-ca-nic"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+
+  ip_configuration {
+    name                          = "primary"
+    subnet_id                     = azurerm_subnet.lab.id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.0.0.5"
+  }
+}
+
+resource "azurerm_windows_virtual_machine" "ca" {
+  name                = "${var.prefix}-ca01"
+  location            = azurerm_resource_group.lab.location
+  resource_group_name = azurerm_resource_group.lab.name
+  size                = "Standard_D2s_v3"
+
+  admin_username = var.admin_username
+  admin_password = var.admin_password
+
+  network_interface_ids = [azurerm_network_interface.ca.id]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2022-Datacenter"
+    version   = "latest"
+  }
+
+  automatic_updates_enabled = true
+}
+
+resource "azurerm_virtual_machine_extension" "ca_domain_join" {
+  name                 = "ca-join-domain"
+  virtual_machine_id   = azurerm_windows_virtual_machine.ca.id
+  publisher            = "Microsoft.Compute"
+  type                 = "JsonADDomainExtension"
+  type_handler_version = "1.3"
+
+  settings = jsonencode({
+    Name    = var.domain_name
+    User    = "${var.domain_netbios}\\${var.admin_username}"
+    Restart = "true"
+    Options = "3"
+  })
+
+  protected_settings = jsonencode({
+    Password = var.admin_password
+  })
+
+  depends_on = [
+    time_sleep.wait_for_dc_ready
+  ]
+}
+
+resource "azurerm_virtual_machine_extension" "ca_config" {
+  name                 = "ca-config"
+  virtual_machine_id   = azurerm_windows_virtual_machine.ca.id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
+  type_handler_version = "1.10"
+
+  settings = jsonencode({
+    fileUris = [
+      "${local.base_raw}/scripts/ca-config.ps1"
+    ]
+  })
+
+  # Put the command in protected_settings so the password isn't in public settings.
+  protected_settings = jsonencode({
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\ca-config.ps1 -DomainFqdn \"${var.domain_name}\" -DcIp \"10.0.0.4\" -DomainUser \"${var.domain_netbios}\\\\${var.admin_username}\" -DomainPassword \"${var.admin_password}\" -CaCommonName \"${var.prefix}-CA01\""
+  })
+
+  depends_on = [
+    azurerm_virtual_machine_extension.ca_domain_join
+  ]
+}
+
+
 #IIS SERVER
 
 resource "azurerm_network_interface" "iis" {
@@ -143,7 +233,7 @@ resource "azurerm_network_interface" "iis" {
     name                          = "primary"
     subnet_id                     = azurerm_subnet.lab.id
     private_ip_address_allocation = "Static"
-    private_ip_address            = "10.0.0.10"
+    private_ip_address            = "10.0.0.6"
   }
 }
 
@@ -210,11 +300,15 @@ resource "azurerm_virtual_machine_extension" "iis_config" {
       "${local.base_raw}/scripts/iis-config.ps1",
       "${local.base_raw}/scripts/patch-all.ps1"
     ]
-    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\iis-config.ps1; & .\\patch-all.ps1\""
+  })
+
+  protected_settings = jsonencode({
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\iis-config.ps1 -DomainFqdn \"${var.domain_name}\" -DcIp \"10.0.0.4\" -DomainUser \"${var.domain_netbios}\\\\${var.admin_username}\" -DomainPassword \"${var.admin_password}\" -CaCommonName \"${var.prefix}-CA01\"; powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\patch-all.ps1"
   })
 
   depends_on = [
-    azurerm_virtual_machine_extension.iis_domain_join
+    azurerm_virtual_machine_extension.iis_domain_join,
+    azurerm_virtual_machine_extension.ca_config
   ]
 }
 
@@ -229,7 +323,7 @@ resource "azurerm_network_interface" "fs" {
     name                          = "primary"
     subnet_id                     = azurerm_subnet.lab.id
     private_ip_address_allocation = "Static"
-    private_ip_address            = "10.0.0.5" # pick an unused IP
+    private_ip_address            = "10.0.0.7" # pick an unused IP
   }
 }
 
@@ -315,7 +409,7 @@ resource "azurerm_network_interface" "sql" {
     name                          = "primary"
     subnet_id                     = azurerm_subnet.lab.id
     private_ip_address_allocation = "Static"
-    private_ip_address            = "10.0.0.6" # pick an unused IP
+    private_ip_address            = "10.0.0.8" # pick an unused IP
   }
 }
 
