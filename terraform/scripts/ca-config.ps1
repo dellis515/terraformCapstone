@@ -20,46 +20,6 @@ try {
   Set-DnsClientServerAddress -InterfaceAlias $if -ServerAddresses $DcIp
 }
 
-Write-Host "==> Waiting for domain readiness: $DomainFqdn (DC $DcIp)"
-$TimeoutMinutes = 45
-$SleepSeconds   = 15
-$deadline = (Get-Date).AddMinutes($TimeoutMinutes)
-
-while ((Get-Date) -lt $deadline) {
-  try {
-    Resolve-DnsName $DomainFqdn -ErrorAction Stop | Out-Null
-
-    $ldap = Test-NetConnection -ComputerName $DcIp -Port 389 -WarningAction SilentlyContinue
-    if (-not $ldap.TcpTestSucceeded) { throw "LDAP not reachable yet" }
-
-    if (Test-Path "\\$DcIp\SYSVOL") {
-      Write-Host "Domain looks ready."
-      break
-    }
-
-    Write-Host "DNS+LDAP ok, waiting for SYSVOL..."
-  }
-  catch {
-    Write-Host "Not ready yet: $($_.Exception.Message)"
-  }
-
-  Start-Sleep -Seconds $SleepSeconds
-}
-
-if ((Get-Date) -ge $deadline) {
-  Write-Error "Timed out waiting for domain readiness after $TimeoutMinutes minutes."
-  Stop-Transcript
-  exit 1
-}
-
-Write-Host "==> Verifying domain join"
-$cs = Get-CimInstance Win32_ComputerSystem
-if (-not $cs.PartOfDomain) {
-  Write-Error "This machine is not domain-joined yet; aborting."
-  Stop-Transcript
-  exit 1
-}
-
 # Inner script that must run with domain credentials (Enterprise/Domain Admin)
 $innerPath = "C:\Windows\Temp\configure-adcs.ps1"
 @"
@@ -87,7 +47,7 @@ Install-AdcsWebEnrollment -Force
 
 Write-Host '==> Publishing common templates (Web Server)'
 # Adds WebServer template to the CA's issuance list (harmless if already present)
-certutil -SetCATemplates +WebServer | Out-Null
+certutil -f -SetCATemplates +WebServer | Out-Null
 
 Write-Host '==> Enabling Computer certificate autoenrollment via GPO'
 Install-WindowsFeature GPMC -IncludeManagementTools | Out-Null

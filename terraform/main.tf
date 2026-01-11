@@ -153,7 +153,7 @@ resource "azurerm_windows_virtual_machine" "ca" {
   name                = "${var.prefix}-ca01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_D2s_v3"
+  size                = "Standard_B1ms"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
@@ -219,6 +219,11 @@ resource "azurerm_virtual_machine_extension" "ca_config" {
   depends_on = [
     azurerm_virtual_machine_extension.ca_domain_join
   ]
+
+  timeouts {
+    create = "120m"
+    update = "120m"
+  }
 }
 
 
@@ -241,7 +246,7 @@ resource "azurerm_windows_virtual_machine" "iis" {
   name                = "${var.prefix}-iis01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_D2s_v3"
+  size                = "Standard_B1ms"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
@@ -331,7 +336,7 @@ resource "azurerm_windows_virtual_machine" "fs" {
   name                = "dellislab-fs01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_D2s_v3"
+  size                = "Standard_B1ms"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
@@ -595,7 +600,7 @@ resource "azurerm_bastion_host" "lab" {
   depends_on = [
     azurerm_subnet.bastion,
     azurerm_public_ip.bastion,
-    azurerm_virtual_machine_extension.fs_config
+    azurerm_virtual_machine_extension.iis_config
   ]
 }
 
