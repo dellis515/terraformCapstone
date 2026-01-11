@@ -151,7 +151,7 @@ resource "azurerm_windows_virtual_machine" "ca" {
   name                = "${var.prefix}-ca01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_D1s_v3"
+  size                = "Standard_D2s_v3"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
@@ -244,7 +244,7 @@ resource "azurerm_windows_virtual_machine" "iis" {
   name                = "${var.prefix}-iis01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_D1s_v3"
+  size                = "Standard_D2s_v3"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
@@ -334,7 +334,7 @@ resource "azurerm_windows_virtual_machine" "fs" {
   name                = "dellislab-fs01"
   location            = azurerm_resource_group.lab.location
   resource_group_name = azurerm_resource_group.lab.name
-  size                = "Standard_D1s_v3"
+  size                = "Standard_D2s_v3"
 
   admin_username = var.admin_username
   admin_password = var.admin_password
