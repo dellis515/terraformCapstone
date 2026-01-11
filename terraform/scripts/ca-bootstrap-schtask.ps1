@@ -67,40 +67,55 @@ $taskName = "CA-Config"
 $outLog   = "C:\Windows\Temp\ca-task.out"
 $errLog   = "C:\Windows\Temp\ca-task.err"
 
-# Build task action (PowerShell) + capture logs
-$exe  = "powershell.exe"
-$args = "-ExecutionPolicy Bypass -NoProfile -File `"$ScriptPath`" 1>>`"$outLog`" 2>>`"$errLog`""
-$action  = New-ScheduledTaskAction -Execute $exe -Argument $args
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2)
-$principal = New-ScheduledTaskPrincipal -UserId $ru -LogonType Password -RunLevel Highest
+Write-Host "==> Creating scheduled task $taskName as $ru (schtasks.exe)"
 
-Write-Host "==> Registering scheduled task $taskName as $ru"
-Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+# delete if exists
+cmd /c "schtasks /Delete /TN `"$taskName`" /F" 1>$null 2>$null
 
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Password $DomainPassword | Out-Null
+# schtasks needs a start time even if we run immediately
+$st = (Get-Date).AddMinutes(2).ToString("HH:mm")
 
+# Build the command line that the task will run (logs stdout/stderr)
+$tr = "cmd.exe /c powershell.exe -ExecutionPolicy Bypass -NoProfile -File `"$ScriptPath`" 1>>`"$outLog`" 2>>`"$errLog`""
+
+# Create the task (DON'T echo the command because it contains the password)
+Write-Host "==> schtasks /Create ... (password redacted)"
+cmd /c "schtasks /Create /TN `"$taskName`" /SC ONCE /ST $st /RL HIGHEST /RU `"$ru`" /RP `"$DomainPassword`" /TR `"$tr`" /F" | Out-Null
+
+# Run it immediately
 Write-Host "==> Starting task"
-Start-ScheduledTask -TaskName $taskName
+cmd /c "schtasks /Run /TN `"$taskName`"" | Out-Null
 
+# Poll until task is no longer running
 Write-Host "==> Waiting for task completion"
 $deadline = (Get-Date).AddMinutes(90)
-do {
-  Start-Sleep 10
-  $info = Get-ScheduledTaskInfo -TaskName $taskName
-} while ($info.State -eq "Running" -and (Get-Date) -lt $deadline)
 
-if ((Get-Date) -ge $deadline) { throw "Timed out waiting for CA scheduled task to complete." }
+while ((Get-Date) -lt $deadline) {
+  $q = cmd /c "schtasks /Query /TN `"$taskName`" /FO LIST /V" 2>&1
 
-$info = Get-ScheduledTaskInfo -TaskName $taskName
-Write-Host "Status: $($info.State)  LastTaskResult: $($info.LastTaskResult)"
+  $statusLine     = ($q | Select-String -Pattern '^Status:\s+').ToString()
+  $lastResultLine = ($q | Select-String -Pattern '^Last Result:\s+').ToString()
 
-if ($info.LastTaskResult -ne 0) {
-  Write-Host "==> Task failed. Tail logs:"
+  if ($statusLine -match 'Status:\s+Running') {
+    Start-Sleep 15
+    continue
+  }
+
+  Write-Host $statusLine
+  Write-Host $lastResultLine
+
+  $lr = ($lastResultLine -replace 'Last Result:\s+','').Trim()
+
+  if ($lr -eq '0' -or $lr -eq '0x0') {
+    Write-Host "==> Task completed successfully"
+    Stop-Transcript
+    exit 0
+  }
+
+  Write-Host "==> Task failed (Last Result: $lr). Tail logs:"
   if (Test-Path $outLog) { Get-Content $outLog -Tail 200 }
   if (Test-Path $errLog) { Get-Content $errLog -Tail 200 }
-  throw "CA scheduled task failed. See $outLog / $errLog and C:\Windows\Temp\ca-bootstrap.log"
+  throw "CA scheduled task failed (Last Result: $lr). See $outLog / $errLog and $bootstrapLog"
 }
 
-Write-Host "==> CA scheduled task completed successfully"
-Stop-Transcript
-exit 0
+throw "Timed out waiting for CA scheduled task to complete."
