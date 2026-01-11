@@ -127,10 +127,17 @@ resource "azurerm_virtual_machine_extension" "dc_config" {
 
 # DELAY
 
+resource "random_uuid" "dc_wait_nonce" {}
+
 resource "time_sleep" "wait_for_dc_ready" {
-  depends_on      = [azurerm_virtual_machine_extension.dc_config] # your DC promotion/config extension
+  depends_on      = [azurerm_virtual_machine_extension.dc_config]
   create_duration = "300s"
+
+  triggers = {
+    nonce = random_uuid.dc_wait_nonce.result
+  }
 }
+
 
 # CA SERVER
 
