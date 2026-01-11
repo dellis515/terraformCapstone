@@ -6,6 +6,10 @@ param(
   [Parameter(Mandatory=$true)][string]$CaCommonName      # e.g. dellislab-CA01
 )
 
+# Normalize a common Terraform/JSON escaping issue: DOMAIN\\user -> DOMAIN\user
+$DomainUser = $DomainUser -replace '\\\\', '\'
+
+
 $ErrorActionPreference = "Stop"
 
 $log = "C:\Windows\Temp\ca-bootstrap.log"

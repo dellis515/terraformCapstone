@@ -211,7 +211,7 @@ resource "azurerm_virtual_machine_extension" "ca_config" {
 
   # Put the command in protected_settings so the password isn't in public settings.
   protected_settings = jsonencode({
-    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\ca-config.ps1 -DomainFqdn \"${var.domain_name}\" -DcIp \"10.0.0.4\" -DomainUser \"${var.domain_netbios}\\\\${var.admin_username}\" -DomainPassword \"${var.admin_password}\" -CaCommonName \"${var.prefix}-CA01\""
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\ca-config.ps1 -DomainFqdn \"${var.domain_name}\" -DcIp \"10.0.0.4\" -DomainUser \"${var.domain_netbios}\\${var.admin_username}\" -DomainPassword \"${var.admin_password}\" -CaCommonName \"${var.prefix}-CA01\""
   })
 
   depends_on = [
@@ -306,7 +306,7 @@ resource "azurerm_virtual_machine_extension" "iis_config" {
   })
 
   protected_settings = jsonencode({
-    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\iis-config.ps1 -DomainFqdn \"${var.domain_name}\" -DcIp \"10.0.0.4\" -DomainUser \"${var.domain_netbios}\\\\${var.admin_username}\" -DomainPassword \"${var.admin_password}\" -CaCommonName \"${var.prefix}-CA01\"; powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\patch-all.ps1"
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\iis-config.ps1 -DomainFqdn \"${var.domain_name}\" -DcIp \"10.0.0.4\" -DomainUser \"${var.domain_netbios}\\${var.admin_username}\" -DomainPassword \"${var.admin_password}\" -CaCommonName \"${var.prefix}-CA01\"; powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\patch-all.ps1"
   })
 
   depends_on = [
