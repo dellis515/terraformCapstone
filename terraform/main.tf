@@ -349,8 +349,7 @@ resource "azurerm_virtual_machine_extension" "iis_config" {
     commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\iis-config.ps1; & .\\patch-all.ps1\""
 
     depends_on = [
-      azurerm_virtual_machine_extension.iis_domain_join,
-      azurerm_virtual_machine_extension.ca_config
+      azurerm_virtual_machine_extension.iis_domain_join
     ]
   })
 }
