@@ -38,6 +38,14 @@ output "fs_private_ip" {
   value = azurerm_network_interface.fs.private_ip_address
 }
 
+output "sql_vm_name" {
+  value = azurerm_windows_virtual_machine.sql.name
+}
+
+output "sql_private_ip" {
+  value = azurerm_network_interface.sql.private_ip_address
+}
+
 output "w11_vm_name" {
   value = azurerm_windows_virtual_machine.w11.name
 }
