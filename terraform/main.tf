@@ -13,7 +13,7 @@ provider "azurerm" {
   features {}
 }
 
-#NETWORK
+# NETWORK
 
 resource "azurerm_resource_group" "lab" {
   name     = "${var.prefix}-rg"
@@ -64,7 +64,7 @@ resource "azurerm_subnet_network_security_group_association" "lab" {
   ]
 }
 
-#DC
+# DC
 
 resource "azurerm_network_interface" "dc" {
   name                = "${var.prefix}-dc-nic"
@@ -264,7 +264,7 @@ resource "azurerm_virtual_machine_run_command" "ca_patch" {
 }
 
 
-#IIS SERVER
+# IIS SERVER
 
 resource "azurerm_network_interface" "iis" {
   name                = "${var.prefix}-iis-nic"
@@ -315,7 +315,7 @@ resource "azurerm_virtual_machine_extension" "iis_domain_join" {
   type_handler_version = "1.3"
 
   settings = jsonencode({
-    Name    = var.domain_name          # "dellis.lab"
+    Name    = var.domain_name
     User    = "${var.domain_netbios}\\${var.admin_username}"
     Restart = "true"
     Options = "3"
@@ -365,7 +365,7 @@ resource "azurerm_network_interface" "fs" {
     name                          = "primary"
     subnet_id                     = azurerm_subnet.lab.id
     private_ip_address_allocation = "Static"
-    private_ip_address            = "10.0.0.7" # pick an unused IP
+    private_ip_address            = "10.0.0.7"
   }
 }
 
@@ -403,7 +403,7 @@ resource "azurerm_virtual_machine_extension" "fs_domain_join" {
   type_handler_version = "1.3"
 
   settings = jsonencode({
-    Name    = var.domain_name          # "dellis.lab"
+    Name    = var.domain_name
     User    = "${var.domain_netbios}\\${var.admin_username}"
     Restart = "true"
     Options = "3"
@@ -434,7 +434,6 @@ resource "azurerm_virtual_machine_extension" "fs_config" {
     commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\fs-config.ps1; & .\\patch-all.ps1\""
   })
 
-  # This is the “wait for DC to finish” part at Terraform level
   depends_on = [
     azurerm_virtual_machine_extension.fs_domain_join
   ]
@@ -451,7 +450,7 @@ resource "azurerm_network_interface" "sql" {
     name                          = "primary"
     subnet_id                     = azurerm_subnet.lab.id
     private_ip_address_allocation = "Static"
-    private_ip_address            = "10.0.0.8" # pick an unused IP
+    private_ip_address            = "10.0.0.8"
   }
 }
 
@@ -489,7 +488,7 @@ resource "azurerm_virtual_machine_extension" "sql_domain_join" {
   type_handler_version = "1.3"
 
   settings = jsonencode({
-    Name    = var.domain_name          # "dellis.lab"
+    Name    = var.domain_name
     User    = "${var.domain_netbios}\\${var.admin_username}"
     Restart = "true"
     Options = "3"
@@ -524,7 +523,7 @@ resource "azurerm_network_interface" "w11" {
     name                          = "primary"
     subnet_id                     = azurerm_subnet.lab.id
     private_ip_address_allocation = "Static"
-    private_ip_address            = "10.0.0.11" # pick an unused IP
+    private_ip_address            = "10.0.0.11"
   }
 }
 
@@ -565,7 +564,7 @@ resource "azurerm_virtual_machine_extension" "w11_domain_join" {
   type_handler_version = "1.3"
 
   settings = jsonencode({
-    Name    = var.domain_name          # "dellis.lab"
+    Name    = var.domain_name
     User    = "${var.domain_netbios}\\${var.admin_username}"
     Restart = "true"
     Options = "3"
@@ -595,7 +594,6 @@ resource "azurerm_virtual_machine_extension" "w11_config" {
     commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\patch-all.ps1\""
   })
 
-  # This is the “wait for DC to finish” part at Terraform level
   depends_on = [
     azurerm_virtual_machine_extension.w11_domain_join
   ]
@@ -608,7 +606,6 @@ resource "azurerm_subnet" "bastion" {
   resource_group_name  = azurerm_resource_group.lab.name
   virtual_network_name = azurerm_virtual_network.lab.name
 
-  # Must be /26 or smaller (e.g. /27) - /27 is common
   address_prefixes = ["10.0.255.0/27"]
 }
 

@@ -8,7 +8,7 @@ Start-Transcript -Path "C:\Windows\Temp\ca-configure.log" -Append
 $ProgressPreference = "SilentlyContinue"
 $ConfirmPreference  = "None"
 
-Write-Host "==> Ensuring DNS points to DC ($DcIp)"
+Write-Host "Ensuring DNS points to DC ($DcIp)"
 try {
   Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses $DcIp
 } catch {
@@ -16,7 +16,7 @@ try {
   Set-DnsClientServerAddress -InterfaceAlias $if -ServerAddresses $DcIp
 }
 
-Write-Host "==> Waiting for domain secure channel"
+Write-Host "Waiting for domain secure channel"
 $domainFqdn = (Get-CimInstance Win32_ComputerSystem).Domain
 $deadline = (Get-Date).AddMinutes(15)
 while ((Get-Date) -lt $deadline) {
@@ -26,10 +26,10 @@ while ((Get-Date) -lt $deadline) {
 }
 if ((Get-Date) -ge $deadline) { throw "Secure channel not ready (nltest sc_verify failed)." }
 
-Write-Host "==> Installing ADCS role"
+Write-Host "Installing ADCS role"
 Install-WindowsFeature ADCS-Cert-Authority -IncludeManagementTools | Out-Null
 
-Write-Host "==> Configuring Enterprise Root CA (idempotent)"
+Write-Host "Configuring Enterprise Root CA (idempotent)"
 $cfgKey = "HKLM:\SYSTEM\CurrentControlSet\Services\CertSvc\Configuration"
 if (Test-Path $cfgKey) {
   Write-Host "CA already configured (CertSvc\\Configuration exists). Skipping CA install."
@@ -45,7 +45,7 @@ if (Test-Path $cfgKey) {
     -Force
 }
 
-Write-Host "==> Optional: Web Enrollment"
+Write-Host "Web Enrollment"
 Install-WindowsFeature ADCS-Web-Enrollment -IncludeManagementTools | Out-Null
 try {
   Install-AdcsWebEnrollment -Force
@@ -53,14 +53,14 @@ try {
   Write-Host "Web Enrollment may already be configured: $($_.Exception.Message)"
 }
 
-Write-Host "==> Ensure CertSvc is running"
+Write-Host "Ensure CertSvc is running"
 Set-Service -Name CertSvc -StartupType Automatic -ErrorAction SilentlyContinue
 Start-Service -Name CertSvc -ErrorAction SilentlyContinue
 
-Write-Host "==> Add WebServer template to issuance list (force)"
+Write-Host "Add WebServer template to issuance list (force)"
 & certutil.exe -f -SetCATemplates +WebServer | Out-Null
 
-Write-Host "==> Enable computer auto-enrollment GPO (no ActiveDirectory module required)"
+Write-Host "Enable computer auto-enrollment GPO (no ActiveDirectory module required)"
 Install-WindowsFeature GPMC -IncludeManagementTools | Out-Null
 Import-Module GroupPolicy
 
@@ -76,5 +76,5 @@ Set-GPRegistryValue -Name $gpoName `
 
 New-GPLink -Name $gpoName -Target $dn -Enforced Yes -ErrorAction SilentlyContinue
 
-Write-Host "==> CA config complete"
+Write-Host "CA config complete"
 Stop-Transcript
