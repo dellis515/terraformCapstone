@@ -74,12 +74,6 @@ $taskName = "Enroll-IIS-WebCert"
 
 $sch = Join-Path $env:WINDIR "System32\schtasks.exe"
 
-# delete if exists (ignore failures)
-& $sch /Query /TN "$taskName" > $null 2> $null
-if ($LASTEXITCODE -eq 0) {
-  & $sch /Delete /TN "$taskName" /F > $null 2> $null
-}
-
 # Ensure inner script exists
 if (-not (Test-Path $innerPath)) { throw "Inner script missing at $innerPath" }
 
