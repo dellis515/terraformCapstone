@@ -244,6 +244,24 @@ resource "azurerm_virtual_machine_extension" "ca_config" {
   ]
 }
 
+resource "azurerm_virtual_machine_run_command" "ca_patch" {
+  name               = "ca-patch"
+  location           = azurerm_resource_group.lab.location
+  virtual_machine_id = azurerm_windows_virtual_machine.ca.id
+
+  source {
+    script = <<-PS1
+      Install-PackageProvider NuGet -Force
+      Install-Module PSWindowsUpdate -Force
+      Import-Module PSWindowsUpdate
+      Get-WindowsUpdate -AcceptAll -Install -AutoReboot
+    PS1
+  }
+
+  depends_on = [
+    azurerm_virtual_machine_extension.ca_config
+  ]
+}
 
 
 #IIS SERVER
@@ -328,13 +346,13 @@ resource "azurerm_virtual_machine_extension" "iis_config" {
 
 
   protected_settings = jsonencode({
-    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\\iis-config.ps1 -DomainFqdn \"${var.domain_name}\" -DcIp \"10.0.0.4\" -DomainUser \"${var.domain_netbios}\\${var.admin_username}\" -DomainPassword \"${var.admin_password}\" -CaCommonName \"${var.prefix}-CA\"; & .\\patch-all.ps1"
-  })
+    commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\iis-config.ps1; & .\\patch-all.ps1\""
 
-  depends_on = [
-    azurerm_virtual_machine_extension.iis_domain_join,
-    azurerm_virtual_machine_extension.ca_config
-  ]
+    depends_on = [
+      azurerm_virtual_machine_extension.iis_domain_join,
+      azurerm_virtual_machine_extension.ca_config
+    ]
+  })
 }
 
 # FILE SERVER
