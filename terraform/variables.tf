@@ -32,3 +32,15 @@ variable "domain_netbios" {
   type        = string
   default     = "DELLIS"
 }
+
+variable "scripts_base_url" {
+  type        = string
+  description = "Base URL to scripts container, no SAS"
+  default = "https://dellislabscripts.blob.core.windows.net/scripts"
+}
+
+variable "scripts_sas" {
+  type        = string
+  description = "SAS query string INCLUDING leading '?'"
+  default = "?sp=rl&st=2026-01-13T01:02:39Z&se=2026-02-02T09:17:39Z&spr=https&sv=2024-11-04&sr=c&sig=k%2FyytU60C3Dcxyiz3Drnzk3dzZvSaL3zYxb8suY9T5A%3D"
+}

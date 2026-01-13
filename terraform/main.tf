@@ -13,6 +13,16 @@ provider "azurerm" {
   features {}
 }
 
+locals {
+  domain_join = "${var.scripts_base_url}/member-domain-join.ps1${var.scripts_sas}"
+  patch_all = "${var.scripts_base_url}/patch-all.ps1${var.scripts_sas}"
+  dc_config = "${var.scripts_base_url}/dc-config.ps1${var.scripts_sas}"
+  fs_config = "${var.scripts_base_url}/fs-config.ps1${var.scripts_sas}"
+  iis_config = "${var.scripts_base_url}/iis-config.ps1${var.scripts_sas}"
+  ca_config = "${var.scripts_base_url}/ca-config-runcommand.ps1${var.scripts_sas}"
+  ca_bootstrap = "${var.scripts_base_url}/ca-bootstrap-schtask.ps1${var.scripts_sas}"
+}
+
 # NETWORK
 
 resource "azurerm_resource_group" "lab" {
@@ -105,11 +115,6 @@ resource "azurerm_windows_virtual_machine" "dc" {
   automatic_updates_enabled = true
 }
 
-locals {
-  ref = "circleci-project-setup"
-  base_raw = "https://raw.githubusercontent.com/dellis515/terraformCapstone/circleci-project-setup/terraform"
-}
-
 resource "azurerm_virtual_machine_extension" "dc_config" {
   name                 = "dc-config"
   virtual_machine_id   = azurerm_windows_virtual_machine.dc.id
@@ -119,7 +124,7 @@ resource "azurerm_virtual_machine_extension" "dc_config" {
 
   settings = jsonencode({
     fileUris = [
-      "${local.base_raw}/scripts/dc-config.ps1"
+      local.dc_config
     ]
     commandToExecute = "powershell -ExecutionPolicy Bypass -File .\\dc-config.ps1"
   })
@@ -230,8 +235,8 @@ resource "azurerm_virtual_machine_extension" "ca_config" {
 
   settings = jsonencode({
     fileUris = [
-      "${local.base_raw}/scripts/ca-config-runcommand.ps1",
-      "${local.base_raw}/scripts/ca-bootstrap-schtask.ps1"
+      local.ca_config,
+      local.ca_bootstrap
     ]
   })
 
@@ -339,8 +344,8 @@ resource "azurerm_virtual_machine_extension" "iis_config" {
 
   settings = jsonencode({
     fileUris = [
-      "${local.base_raw}/scripts/iis-config.ps1",
-      "${local.base_raw}/scripts/patch-all.ps1"
+      local.iis_config,
+      local.patch_all
     ]
   })
 
@@ -427,8 +432,8 @@ resource "azurerm_virtual_machine_extension" "fs_config" {
 
   settings = jsonencode({
     fileUris = [
-      "${local.base_raw}/scripts/fs-config.ps1",
-      "${local.base_raw}/scripts/patch-all.ps1",
+      local.fs_config,
+      local.patch_all
     ]
 
     commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\fs-config.ps1; & .\\patch-all.ps1\""
@@ -588,7 +593,7 @@ resource "azurerm_virtual_machine_extension" "w11_config" {
 
   settings = jsonencode({
     fileUris = [
-      "${local.base_raw}/scripts/patch-all.ps1",
+      local.patch_all
     ]
 
     commandToExecute = "powershell.exe -ExecutionPolicy Bypass -NoProfile -Command \"& .\\patch-all.ps1\""
