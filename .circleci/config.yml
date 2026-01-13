@@ -70,7 +70,7 @@ workflows:
             - terraform-plan
       - terraform-apply:
           requires:
-            - terraform-plan
+            - hold-apply
       - hold-destroy:
           type: approval
           requires:
