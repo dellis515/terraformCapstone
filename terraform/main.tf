@@ -14,7 +14,6 @@ provider "azurerm" {
 }
 
 locals {
-  domain_join = "${var.scripts_base_url}/member-domain-join.ps1${var.scripts_sas}"
   patch_all = "${var.scripts_base_url}/patch-all.ps1${var.scripts_sas}"
   dc_config = "${var.scripts_base_url}/dc-config.ps1${var.scripts_sas}"
   fs_config = "${var.scripts_base_url}/fs-config.ps1${var.scripts_sas}"
